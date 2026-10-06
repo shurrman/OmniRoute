@@ -51,6 +51,13 @@ export const claudeProvider: RegistryEntry = {
       unsupportedParams: ["temperature", "top_p", "top_k"],
     },
     {
+      id: "claude-opus-5-5",
+      name: "Claude Opus 5.5",
+      // Conservative metadata; long-context and effort tiers need separate verification.
+      contextLength: 200000,
+      unsupportedParams: ["temperature", "top_p", "top_k"],
+    },
+    {
       id: "claude-opus-5",
       name: "Claude Opus 5",
       contextLength: 1000000,
