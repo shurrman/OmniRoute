@@ -60,7 +60,7 @@ function installFetchMock(
   };
 }
 
-function assertThreeWindows(usage: {
+function assertPlanUsageWindows(usage: {
   plan?: string;
   quotas?: Record<
     string,
@@ -76,20 +76,14 @@ function assertThreeWindows(usage: {
 }) {
   assert.equal(usage.plan, "Cursor Pro");
   assert.ok(usage.quotas);
-  assert.deepEqual(Object.keys(usage.quotas!), ["Total", "Auto + Composer", "API"]);
-
-  const total = usage.quotas!.Total;
-  assert.equal(total.total, 20);
-  assert.equal(total.used, 15.29);
-  assert.equal(total.remaining, 4.71);
-  assert.ok(Math.abs((total.remainingPercentage ?? 0) - (100 - 10.193333333333333)) < 1e-6);
-  assert.equal(total.unlimited, false);
-  assert.equal(total.resetAt, new Date(Number("1779264371000")).toISOString());
+  assert.deepEqual(Object.keys(usage.quotas!), ["Auto + Composer", "API"]);
 
   const auto = usage.quotas!["Auto + Composer"];
   assert.equal(auto.total, 20);
   assert.equal(auto.used, 2.64);
   assert.ok(Math.abs((auto.remainingPercentage ?? 0) - (100 - 13.20952380952381)) < 1e-6);
+  assert.equal(auto.unlimited, false);
+  assert.equal(auto.resetAt, new Date(Number("1779264371000")).toISOString());
 
   const api = usage.quotas!.API;
   assert.equal(api.total, 20);
@@ -97,7 +91,7 @@ function assertThreeWindows(usage: {
   assert.ok(Math.abs((api.remainingPercentage ?? 0) - (100 - 3.155555555555556)) < 1e-6);
 }
 
-test("cursor usage: Bearer period-usage happy path returns three windows", async () => {
+test("cursor usage: Bearer period-usage happy path returns Auto + Composer and API windows", async () => {
   const accessToken = makeJwt({ sub: "user_01BEARER" });
 
   const mock = installFetchMock(async (url) => {
@@ -116,7 +110,7 @@ test("cursor usage: Bearer period-usage happy path returns three windows", async
       accessToken,
       providerSpecificData: {},
     });
-    assertThreeWindows(usage);
+    assertPlanUsageWindows(usage);
     assert.equal(mock.calls.length, 1);
     assert.equal(mock.calls[0].url, CURSOR_PERIOD_URL);
     const headers = mock.calls[0].init.headers as Record<string, string>;
@@ -154,8 +148,9 @@ test("cursor usage: falls back to summary when period-usage fails", async () => 
       accessToken,
     });
     assert.equal(usage.plan, "Cursor Pro");
-    assert.ok(usage.quotas?.Total);
-    assert.equal(usage.quotas!.Total.total, 20);
+    assert.ok(usage.quotas?.["Auto + Composer"]);
+    assert.equal(usage.quotas!["Auto + Composer"].total, 20);
+    assert.deepEqual(Object.keys(usage.quotas!), ["Auto + Composer", "API"]);
     assert.deepEqual(
       mock.calls.map((c) => c.url),
       [CURSOR_PERIOD_URL, CURSOR_SUMMARY_URL]
@@ -225,7 +220,7 @@ test("cursor usage: cookie dashboard is last fallback after Bearer APIs fail", a
       accessToken,
       providerSpecificData: { userId },
     });
-    assertThreeWindows(usage);
+    assertPlanUsageWindows(usage);
     assert.equal(mock.calls.length, 4);
     assert.equal(mock.calls[3].url, CURSOR_COOKIE_USAGE_URL);
     const headers = mock.calls[3].init.headers as Record<string, string>;
@@ -288,7 +283,7 @@ test("cursor usage: Bearer-only token without userId still works via period API"
       accessToken,
       providerSpecificData: {},
     });
-    assertThreeWindows(usage);
+    assertPlanUsageWindows(usage);
     assert.equal(mock.calls.length, 1);
   } finally {
     mock.restore();

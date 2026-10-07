@@ -82,14 +82,9 @@ function buildPlanUsageQuotas(
     : Math.max(0, toNumber(planUsage.totalSpend, 0));
 
   const rawTotalPct = toNumber(planUsage.totalPercentUsed ?? planUsage.percentUsed, NaN);
-  let totalPercentUsed: number;
-  if (Number.isFinite(rawTotalPct)) {
-    totalPercentUsed = clampPercentage(rawTotalPct);
-  } else if (limitCents > 0) {
-    totalPercentUsed = clampPercentage((totalSpendCents / limitCents) * 100);
-  } else {
-    return null;
-  }
+  const hasMeasurableTotal =
+    Number.isFinite(rawTotalPct) || (limitCents > 0 && Number.isFinite(totalSpendCents));
+  if (!hasMeasurableTotal) return null;
 
   const autoPercentUsed = clampPercentage(toNumber(planUsage.autoPercentUsed, 0));
   const apiPercentUsed = clampPercentage(toNumber(planUsage.apiPercentUsed, 0));
@@ -116,7 +111,6 @@ function buildPlanUsageQuotas(
   };
 
   return {
-    Total: buildWindow(totalPercentUsed, limitCents > 0 ? totalSpendCents : undefined),
     "Auto + Composer": buildWindow(autoPercentUsed),
     API: buildWindow(apiPercentUsed),
   };
