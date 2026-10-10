@@ -23,3 +23,10 @@ reasoning effort tiers require independent verification before being advertised.
 cursor.com. Auth/usage legacy fallback may still expose a single Total window.
 TokenGateway also filters Total client-side for currently deployed OmniRoute.
 
+## main synchronization (2026-10-10)
+
+`main` on this fork now includes `wsoft/3.8.52` via merge commit `0a28d9da`
+(parents `fc5e2bcc` + `b0758883`). Keep deploying from `wsoft/3.8.52` unless a
+release process explicitly retargets. The abort-cleanup fix, Cursor Total
+removal and Opus 5.5 registry entry are present on both tips.
+
