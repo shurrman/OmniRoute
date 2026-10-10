@@ -323,6 +323,7 @@ export function createStreamController({
   const controller = {
     signal: abortController.signal,
     startTime,
+    dispose: cleanupClientAbortListener,
 
     isConnected: () => !disconnected,
 

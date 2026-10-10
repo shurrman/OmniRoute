@@ -555,6 +555,14 @@ Domain State DB (SQLite):
 
 ## Request Lifecycle (`/v1/chat/completions`)
 
+`chatCore` owns the stream controller's client-abort subscription until a live
+stream takes ownership. All non-streaming and early-error exits dispose that
+subscription in `finally`. Disposal only removes the listener: it does not abort
+the upstream, report successful completion, or change pending-request accounting.
+Live streams keep cancellation propagation until completion, error, or disconnect.
+This prevents Node's persistent composite AbortSignals from retaining completed
+request bodies and prepared-request logging captures through controller callbacks.
+
 ```mermaid
 sequenceDiagram
     autonumber
