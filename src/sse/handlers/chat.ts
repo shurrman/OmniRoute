@@ -424,6 +424,19 @@ const managedComboRejection = () =>
 
 const comboPromoteDeps = { updateCombo, info: log.info, warn: log.warn };
 
+// The provider breaker lives in the process-wide registry and getCircuitBreaker() replaces its
+// callbacks on every call. A callback created inside the request handler shares that handler's
+// V8 context, so the breaker kept the last request's whole scope alive — its body included: a
+// 100k-token /v1/messages body survived forced GC through `onStateChange` (JON-562). The
+// callbacks the breaker stores therefore never close over request state.
+function breakerCountsAsFailure(error: unknown): boolean {
+  return !isLocalStreamLifecycleError(error);
+}
+
+function logBreakerStateChange(name: string, from: string, to: string): void {
+  log.info("CIRCUIT", `${name}: ${from} → ${to}`);
+}
+
 export { shouldTripProviderBreakerForResult } from "./chatPredicates";
 
 async function handleChatImplementation(
@@ -1633,9 +1646,8 @@ async function handleSingleModelChat(
     resetTimeout: providerProfile.resetTimeoutMs,
     // #4602: a local WS-bridge "Controller is already closed" throw is not an
     // upstream outage — keep it from tripping the whole-provider breaker.
-    isFailure: (e) => !isLocalStreamLifecycleError(e),
-    onStateChange: (name: string, from: string, to: string) =>
-      log.info("CIRCUIT", `${name}: ${from} → ${to}`),
+    isFailure: breakerCountsAsFailure,
+    onStateChange: logBreakerStateChange,
     ...(useHints429
       ? {
           cooldownByKind: {
