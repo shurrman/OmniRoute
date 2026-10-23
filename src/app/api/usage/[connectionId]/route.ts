@@ -1,4 +1,17 @@
 import { fetchAndPersistProviderLimits } from "@/lib/usage/providerLimits";
+import { getProviderConnectionById } from "@/lib/db/providers";
+
+const CODEX_AUTH_ERROR_TYPES = new Set(["unauthorized", "account_deactivated", "oauth_invalid_token"]);
+
+export function isCodexAuthenticationFailure(connection: Record<string, unknown> | null | undefined): boolean {
+  if (typeof connection?.provider !== "string" || connection.provider.toLowerCase() !== "codex") {
+    return false;
+  }
+  const testStatus = typeof connection.testStatus === "string" ? connection.testStatus.toLowerCase() : "";
+  const lastErrorType =
+    typeof connection.lastErrorType === "string" ? connection.lastErrorType.toLowerCase() : "";
+  return testStatus === "expired" || CODEX_AUTH_ERROR_TYPES.has(lastErrorType);
+}
 
 /**
  * GET /api/usage/[connectionId] - Get live usage data for a specific connection
@@ -17,6 +30,13 @@ export async function GET(
 ) {
   try {
     const { connectionId } = await params;
+    const connection = await getProviderConnectionById(connectionId);
+    if (isCodexAuthenticationFailure(connection as Record<string, unknown> | null)) {
+      return Response.json(
+        { error: "Codex OAuth authentication expired; reconnect the account." },
+        { status: 401 }
+      );
+    }
     const { usage } = await fetchAndPersistProviderLimits(connectionId, "manual", {
       allowRotatingRefresh: true,
     });

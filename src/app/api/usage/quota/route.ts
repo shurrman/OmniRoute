@@ -19,12 +19,26 @@ function toDateMs(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function deriveTokenStatus(connection: ProviderConnectionRecord): QuotaTokenStatus {
+export function deriveTokenStatus(connection: ProviderConnectionRecord): QuotaTokenStatus {
+  const provider =
+    typeof connection.provider === "string" ? connection.provider.trim().toLowerCase() : "";
   const testStatus =
     typeof connection.testStatus === "string" ? connection.testStatus.toLowerCase() : "";
 
   if (testStatus === "expired") return "expired";
   if (testStatus === "refreshing") return "refreshing";
+
+  // Codex 401s are handled by the model-scope cooldown path, which deliberately
+  // leaves the connection active for other Codex models. The quota card must
+  // still distinguish an expired OAuth session from a temporary quota/cooldown.
+  const lastErrorType =
+    typeof connection.lastErrorType === "string" ? connection.lastErrorType.toLowerCase() : "";
+  if (
+    provider === "codex" &&
+    ["unauthorized", "account_deactivated", "oauth_invalid_token"].includes(lastErrorType)
+  ) {
+    return "expired";
+  }
 
   const expiresAtMs = toDateMs(connection.tokenExpiresAt);
   if (expiresAtMs !== null) {
@@ -33,8 +47,6 @@ function deriveTokenStatus(connection: ProviderConnectionRecord): QuotaTokenStat
     if (msRemaining <= 15 * 60 * 1000) return "expiring";
   }
 
-  const lastErrorType =
-    typeof connection.lastErrorType === "string" ? connection.lastErrorType.toLowerCase() : "";
   if (lastErrorType.includes("refresh")) return "expiring";
 
   return "valid";

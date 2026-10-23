@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Keep OmniRoute Codex quota cards honest after inference authentication expires:
+  quota status becomes `expired`, and the per-account usage endpoint returns
+  `401` instead of serving a stale quota snapshot.
+
 ### ✨ New Features
 
 - **feat(dashboard):** adaptive context-budget dial on the compression settings panel — mode (`off` / `floor` / `replace-autotrigger`) and policy (`reserve-output` / `percentage` / `absolute`) persist via `PUT /api/settings/compression` `contextBudget`. Completes the dashboard half of #7005 (API + DB already shipped in #7183).
