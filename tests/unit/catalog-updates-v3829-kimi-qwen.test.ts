@@ -20,17 +20,36 @@ const providerCatalog = await import("../../src/lib/providers/catalog.ts");
 test("kmca legacy alias exposes the stable Kimi Code fallback models", () => {
   const models = getModelsByProviderId("kmca");
   const ids = new Set(models.map((m) => m.id));
-  assert.deepEqual([...ids], ["k3", "kimi-for-coding", "kimi-for-coding-highspeed"]);
+  // 2026-11-05: api.kimi.com/coding/v1/models (live) added k3-256k, k3.1-pro
+  // and k3.1-pro-highspeed to the Kimi Coding plan; keep the fallback in sync.
+  assert.deepEqual(
+    [...ids],
+    [
+      "k3",
+      "kimi-for-coding",
+      "kimi-for-coding-highspeed",
+      "k3-256k",
+      "k3.1-pro",
+      "k3.1-pro-highspeed",
+    ]
+  );
 });
 
 test("kmca stable fallback only carries documented static capabilities", () => {
   const models = getModelsByProviderId("kmca");
-  const k3 = models.find((model) => model.id === "k3");
-  assert.equal(k3?.contextLength, 1048576);
-  // #14003: kimi-for-coding / kimi-for-coding-highspeed now advertise Kimi
-  // K2.8 Preview's native 1M context (was 262144 under the old K2.7 Code id).
-  for (const model of models.filter((entry) => entry.id !== "k3")) {
-    assert.equal(model.contextLength, 1048576);
+  // Live-verified context lengths (api.kimi.com/coding/v1/models, 2026-11-05):
+  // #14003: kimi-for-coding / kimi-for-coding-highspeed advertise Kimi
+  // K2.8 Preview's native 1M context; k3.1-pro-highspeed is the other 1M row.
+  const expectedContext: Record<string, number> = {
+    k3: 1048576,
+    "kimi-for-coding": 1048576,
+    "kimi-for-coding-highspeed": 1048576,
+    "k3-256k": 262144,
+    "k3.1-pro": 262144,
+    "k3.1-pro-highspeed": 1048576,
+  };
+  for (const model of models) {
+    assert.equal(model.contextLength, expectedContext[model.id]);
   }
   for (const model of models) {
     assert.equal(model.maxOutputTokens, undefined);

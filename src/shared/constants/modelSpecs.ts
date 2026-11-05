@@ -588,6 +588,37 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     aliases: ["kimi-k2.7", "kimi-k2.7-code-thinking", "kimi-k2.7-code-highspeed"],
   },
 
+  // ── Kimi K3.1 / K3-256k (Kimi Coding wire ids — verified live 2026-11-05) ──
+  // api.kimi.com/coding/v1/models returns these alongside k3/kimi-for-coding;
+  // all four support reasoning (low/high/max), tools, and text+image+video in.
+  "kimi-k3-256k": {
+    maxOutputTokens: 262144,
+    contextWindow: 262144,
+    thinkingBudgetCap: 32768,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+    aliases: ["k3-256k"],
+  },
+  "kimi-k3.1-pro": {
+    maxOutputTokens: 262144,
+    contextWindow: 262144,
+    thinkingBudgetCap: 32768,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+    aliases: ["k3.1-pro"],
+  },
+  "kimi-k3.1-pro-highspeed": {
+    maxOutputTokens: 262144,
+    contextWindow: 1048576,
+    thinkingBudgetCap: 32768,
+    supportsThinking: true,
+    supportsTools: true,
+    supportsVision: true,
+    aliases: ["k3.1-pro-highspeed"],
+  },
+
   // ── Kimi K2.5 (Moonshot — 262K native, parity with K2.6) ────────
   "kimi-k2.5": {
     maxOutputTokens: 262144,

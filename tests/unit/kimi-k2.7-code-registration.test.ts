@@ -21,14 +21,25 @@ function modelIds(provider: string): string[] {
   return (entry.models ?? []).map((m) => m.id);
 }
 
+// 2026-11-05: api.kimi.com/coding/v1/models (live) added k3-256k, k3.1-pro
+// and k3.1-pro-highspeed to the Kimi Coding plan.
+const STABLE_IDS = [
+  "k3",
+  "kimi-for-coding",
+  "kimi-for-coding-highspeed",
+  "k3-256k",
+  "k3.1-pro",
+  "k3.1-pro-highspeed",
+];
+
 test("kimi-coding (OAuth) keeps the current stable offline aliases", () => {
   const ids = modelIds("kimi-coding");
-  assert.deepEqual(ids, ["k3", "kimi-for-coding", "kimi-for-coding-highspeed"]);
+  assert.deepEqual(ids, STABLE_IDS);
 });
 
 test("legacy kimi-coding-apikey shares the current stable offline aliases", () => {
   const ids = modelIds("kimi-coding-apikey");
-  assert.deepEqual(ids, ["k3", "kimi-for-coding", "kimi-for-coding-highspeed"]);
+  assert.deepEqual(ids, STABLE_IDS);
 });
 
 test("Kimi Code k3 fallback advertises the documented 1M context and thinking", () => {

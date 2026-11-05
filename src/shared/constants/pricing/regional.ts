@@ -2,9 +2,7 @@
  * Pricing data — regional family (China + other regional providers (incl. GLM/Zhipu)).
  * Pure data; merged by default-pricing.ts via spread (god-file decomposition; semantic split).
  */
-import {
-  GLM_PRICING,
-} from "./shared-tiers";
+import { GLM_PRICING } from "./shared-tiers";
 
 export const DEFAULT_PRICING_REGIONAL = {
   glm: GLM_PRICING,
@@ -39,6 +37,29 @@ export const DEFAULT_PRICING_REGIONAL = {
       cached: 0.3,
       reasoning: 4.5,
       cache_creation: 0.6,
+    },
+    // 2026-11-05: K3.1/K3-256k Kimi Coding wire ids, Moonshot K2.5-equivalent
+    // rates (subscription plan; indicative only).
+    "k3-256k": {
+      input: 0.6,
+      output: 3.0,
+      cached: 0.3,
+      reasoning: 4.5,
+      cache_creation: 0.6,
+    },
+    "k3.1-pro": {
+      input: 0.6,
+      output: 3.0,
+      cached: 0.3,
+      reasoning: 4.5,
+      cache_creation: 0.6,
+    },
+    "k3.1-pro-highspeed": {
+      input: 1.2,
+      output: 6.0,
+      cached: 0.6,
+      reasoning: 9.0,
+      cache_creation: 1.2,
     },
     "moonshot-kimi-k2.5": {
       input: 0.6,

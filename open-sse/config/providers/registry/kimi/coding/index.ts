@@ -27,6 +27,29 @@ export const KIMI_CODING_MODELS: RegistryModel[] = [
     contextLength: 1048576,
     supportsReasoning: true,
   },
+  // 2026-11-05: api.kimi.com/coding/v1/models (live, same Kimi Coding plan
+  // account) now also serves the K3.1 family and a 256k K3 variant. Verified
+  // live wire ids and context lengths; reasoning supported on all four.
+  // supportsVision intentionally unset here per #4071 — vision is applied via
+  // MODEL_SPECS below, mirroring the k3 entry.
+  {
+    id: "k3-256k",
+    name: "Kimi K3-256k",
+    contextLength: 262144,
+    supportsReasoning: true,
+  },
+  {
+    id: "k3.1-pro",
+    name: "Kimi K3.1 Pro",
+    contextLength: 262144,
+    supportsReasoning: true,
+  },
+  {
+    id: "k3.1-pro-highspeed",
+    name: "Kimi K3.1 Pro Highspeed",
+    contextLength: 1048576,
+    supportsReasoning: true,
+  },
 ];
 
 export const KIMI_CODING_SHARED = {
