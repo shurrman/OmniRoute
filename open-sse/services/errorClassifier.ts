@@ -484,6 +484,16 @@ export function classifyProviderError(
   if (statusCode === 403 && accountDeactivated) {
     return PROVIDER_ERROR_TYPES.ACCOUNT_DEACTIVATED;
   }
+  if (
+    statusCode === 403 &&
+    provider === "kimi-coding" &&
+    /\byour current subscription does not have access to [a-z0-9][a-z0-9._-]{0,127}\b/i.test(
+      bodyStr
+    )
+  ) {
+    // A plan entitlement refusal applies to one model, not the OAuth account.
+    return PROVIDER_ERROR_TYPES.MODEL_NOT_FOUND;
+  }
   if (statusCode === 403 && isAccountVerificationRequired(bodyStr)) {
     // Google Cloud Code / Antigravity answer `403 VALIDATION_REQUIRED` with
     // "Verify your account to continue". This is a TRANSIENT, operator-actionable

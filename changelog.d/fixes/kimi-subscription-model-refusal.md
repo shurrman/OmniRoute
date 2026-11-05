@@ -1,0 +1,1 @@
+Kimi Coding: treat a 403 stating that the current subscription cannot access a named model as a model-only refusal, preserving the OAuth connection and other models. Generic forbidden errors and genuine account suspensions retain their existing behavior.
