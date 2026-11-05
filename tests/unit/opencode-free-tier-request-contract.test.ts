@@ -88,7 +88,7 @@ test("chat completions: the contract adds streaming and a placeholder tool, and 
   const tools = body.tools as Array<{ type: string; function: { name: string } }>;
   assert.equal(tools.length, 1);
   assert.equal(tools[0].type, "function");
-  assert.equal(tools[0].function.name, "_noop");
+  assert.equal(tools[0].function.name, "read");
   // The upstream answers 400 `only "auto" is supported for tool_choice` (measured
   // 2026-09-18 on the Chat Completions surface), so none is imposed here either.
   assert.equal("tool_choice" in body, false);
@@ -105,9 +105,11 @@ test("the placeholder carries the names it is given, one entry each", () => {
     tools.map((t) => t.function.name),
     ["glob", "grep", "read"]
   );
-  // Names only: an empty parameter object, so a borrowed name is a list entry rather than
-  // a tool the model could usefully call.
-  assert.deepEqual(tools[0].function.parameters, { type: "object", properties: {} });
+  assert.deepEqual(tools[0].function.parameters, {
+    type: "object",
+    properties: { pattern: { type: "string" } },
+    required: ["pattern"],
+  });
 });
 
 test("responses: several placeholder names keep the flat shape and no tool_choice", () => {
@@ -144,7 +146,7 @@ test("responses: the placeholder tool is flat and tool_choice stays absent", () 
   const tools = body.tools as Array<{ type: string; name: string }>;
   assert.equal(tools.length, 1);
   assert.equal(tools[0].type, "function");
-  assert.equal(tools[0].name, "_noop");
+  assert.equal(tools[0].name, "read");
   assert.equal("tool_choice" in body, false);
 });
 
@@ -159,7 +161,7 @@ test("client-supplied tools are never replaced, required placeholders are append
   const tools = body.tools as Array<{ type: string; function?: { name: string } }>;
   assert.equal(tools.length, 2);
   assert.equal(tools[0].function?.name, "search");
-  assert.equal(tools[1].function?.name, "_noop");
+  assert.equal(tools[1].function?.name, "read");
   assert.equal("tool_choice" in body, false);
   assert.equal(body.stream, true);
 });
@@ -167,7 +169,7 @@ test("client-supplied tools are never replaced, required placeholders are append
 test("when client-supplied tools already include placeholder tools, nothing extra is added", () => {
   const clientTools = [
     { type: "function", function: { name: "search", parameters: { type: "object" } } },
-    { type: "function", function: { name: "_noop", parameters: { type: "object" } } },
+    { type: "function", function: { name: "read", parameters: { type: "object" } } },
   ];
   const body = applyFreeTierRequestContract(
     { ...CHAT_BODY(), tools: clientTools },
@@ -511,7 +513,7 @@ test("with nothing observed and nothing configured, the built-in placeholder is 
   const tools = (body as Record<string, unknown>).tools as Array<{ function: { name: string } }>;
   assert.deepEqual(
     tools.map((t) => t.function.name),
-    ["_noop"]
+    ["read"]
   );
   // Nothing was borrowed, so a refusal here must not be charged against the store.
   assert.equal(attempt?.borrowed, false);

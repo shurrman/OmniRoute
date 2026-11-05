@@ -19,6 +19,16 @@ export const OPENCODE_SESSION_PATTERN = /^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$/;
 /** Same shape for the request id, which the upstream accepts but does not validate. */
 export const OPENCODE_REQUEST_PATTERN = /^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/;
 
+export const OPENCODE_SESSION_TIME_PART_PATTERN = /^[0-9a-f]{9}f[c-f][0-9a-f]$/;
+
+export function isValidOpencodeSessionValue(
+  sessionId: string | null | undefined
+): string | undefined {
+  const value = (sessionId || "").trim();
+  if (!OPENCODE_SESSION_PATTERN.test(value)) return undefined;
+  return OPENCODE_SESSION_TIME_PART_PATTERN.test(value.slice(4, 16)) ? value : undefined;
+}
+
 const MINIMUM_USER_AGENT_MINOR = 17;
 const USER_AGENT_VERSION_RE = /opencode\/(?:[a-z]+\/)?v?(\d+)\.(\d+)/i;
 
@@ -91,15 +101,24 @@ function base62From(bytes: Buffer, length: number): string {
 /**
  * Render an id in the canonical OpenCode shape (`<prefix>` + 12 hex + 14 base62).
  *
- * The upstream checks the shape and not the value: 12 arbitrary hex digits pass, so
- * there is no need to reproduce the client's own id algorithm (timestamp plus counter).
- * With a seed the result is deterministic, which is what keeps a conversation on one
- * upstream session — and therefore keeps prompt caching warm — across requests.
+ * Sessions use the client's descending 48-bit timestamp/counter encoding, with counter
+ * pinned to one. Hash-derived timestamps keep conversation and prompt-cache affinity.
+ * Request ids retain their plain hash encoding.
  */
 function canonicalId(prefix: "ses_" | "msg_", seed?: string): string {
   const bytes = seed
     ? createHash("sha256").update(`opencode\u0000${prefix}\u0000${seed}`).digest()
     : randomBytes(32);
+  if (prefix === "ses_") {
+    const timestamp =
+      (BigInt(bytes[0]) << 28n) |
+      (BigInt(bytes[1]) << 20n) |
+      (BigInt(bytes[2]) << 12n) |
+      (BigInt(bytes[3]) << 4n) |
+      (BigInt(bytes[4]) >> 4n);
+    const value = ~((timestamp << 12n) | 1n) & 0xffffffffffffn;
+    return `${prefix}${value.toString(16).padStart(12, "0")}${base62From(bytes.subarray(6), 14)}`;
+  }
   return `${prefix}${bytes.subarray(0, 6).toString("hex")}${base62From(bytes.subarray(6), 14)}`;
 }
 
@@ -165,6 +184,7 @@ export function forwardOpencodeClientHeaders(
     synthesizeRequestId?: boolean;
     cliDefaults?: { userAgent: string; client: string; project: string };
     sessionBody?: OpencodeSessionBody;
+    reencodeSession?: boolean;
   }
 ): void {
   // 1. Forward User-Agent
@@ -197,7 +217,7 @@ export function forwardOpencodeClientHeaders(
   // 4. OpencodeExecutor-only: synthesize the OpenCode CLI identity Cloudflare expects
   //    on VPS egress, for any key the client did not supply (#5997).
   if (options?.cliDefaults) {
-    applyCliDefaults(headers, options.cliDefaults, options.sessionBody);
+    applyCliDefaults(headers, options.cliDefaults, options.sessionBody, options.reencodeSession);
   }
 }
 
@@ -228,7 +248,8 @@ function applySessionFallback(
 function applyCliDefaults(
   headers: Record<string, string>,
   cliDefaults: { userAgent: string; client: string; project: string },
-  sessionBody?: OpencodeSessionBody
+  sessionBody?: OpencodeSessionBody,
+  reencodeSession = false
 ): void {
   // A client User-Agent is kept only when it already satisfies the upstream contract.
   // The previous rule kept anything starting with `opencode-cli/`, which carries no
@@ -248,9 +269,12 @@ function applyCliDefaults(
       ? clientRequestId
       : canonicalId("msg_", clientRequestId || undefined);
   const clientSessionId = headers["x-opencode-session"]?.trim();
-  headers["x-opencode-session"] = clientSessionId
-    ? OPENCODE_SESSION_PATTERN.test(clientSessionId)
+  const canonicalClientSession = reencodeSession
+    ? isValidOpencodeSessionValue(clientSessionId)
+    : clientSessionId && OPENCODE_SESSION_PATTERN.test(clientSessionId)
       ? clientSessionId
-      : canonicalId("ses_", clientSessionId)
+      : undefined;
+  headers["x-opencode-session"] = clientSessionId
+    ? (canonicalClientSession ?? canonicalId("ses_", clientSessionId))
     : canonicalId("ses_", generateSessionId(sessionBody ?? null) ?? undefined);
 }

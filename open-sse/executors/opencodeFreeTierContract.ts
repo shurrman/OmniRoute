@@ -121,6 +121,8 @@ export type OpencodeSurface = "zen" | "go" | "other";
 const ZEN_SURFACE_BASE_URL = "https://opencode.ai/zen/v1";
 const GO_SURFACE_BASE_URL = "https://opencode.ai/zen/go/v1";
 
+export const FREE_TIER_INFERENCE_BASE_URL = "https://opencode.ai/inference/v1";
+
 /** Tell the surfaces apart by registry `baseUrl`, so provider ids and aliases stay out. */
 export function surfaceFromBaseUrl(baseUrl: string | null | undefined): OpencodeSurface {
   if (baseUrl === ZEN_SURFACE_BASE_URL) return "zen";
@@ -166,7 +168,7 @@ export function requiresFreeTierRequestContract(
 }
 
 /** The placeholder tool name the official client uses for the same purpose. */
-const PLACEHOLDER_TOOL_NAME = "_noop";
+const PLACEHOLDER_TOOL_NAME = "read";
 export const DEFAULT_PLACEHOLDER_TOOL_NAME = PLACEHOLDER_TOOL_NAME;
 
 /**
@@ -195,6 +197,17 @@ export function configuredPlaceholderToolNames(): string[] {
 const PLACEHOLDER_TOOL_DESCRIPTION =
   "Do not call this tool. It exists only for API compatibility and must never be invoked.";
 const PLACEHOLDER_TOOL_PARAMETERS = { type: "object", properties: {} } as const;
+
+const PLACEHOLDER_TOOL_PARAMETER_SCHEMAS: Readonly<Record<string, Record<string, unknown>>> = {
+  bash: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
+  glob: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"] },
+  grep: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"] },
+  read: { type: "object", properties: { filePath: { type: "string" } }, required: ["filePath"] },
+};
+
+export function placeholderToolParameters(name: string): Record<string, unknown> {
+  return PLACEHOLDER_TOOL_PARAMETER_SCHEMAS[name] ?? PLACEHOLDER_TOOL_PARAMETERS;
+}
 
 /**
  * Bring a free-tier request up to the upstream contract, without overriding anything the
@@ -236,7 +249,7 @@ export function applyFreeTierRequestContract<T>(
         type: "function",
         name,
         description: PLACEHOLDER_TOOL_DESCRIPTION,
-        parameters: PLACEHOLDER_TOOL_PARAMETERS,
+        parameters: placeholderToolParameters(name),
       })),
     ];
     return next as T;
@@ -250,7 +263,7 @@ export function applyFreeTierRequestContract<T>(
         function: {
           name,
           description: PLACEHOLDER_TOOL_DESCRIPTION,
-          parameters: PLACEHOLDER_TOOL_PARAMETERS,
+          parameters: placeholderToolParameters(name),
         },
       })),
     ];
@@ -302,7 +315,7 @@ export function mergeClientToolsWithObserved<T>(
         type: "function",
         name,
         description: PLACEHOLDER_TOOL_DESCRIPTION,
-        parameters: PLACEHOLDER_TOOL_PARAMETERS,
+        parameters: placeholderToolParameters(name),
       })),
     ];
     return next as T;
@@ -315,7 +328,7 @@ export function mergeClientToolsWithObserved<T>(
         function: {
           name,
           description: PLACEHOLDER_TOOL_DESCRIPTION,
-          parameters: PLACEHOLDER_TOOL_PARAMETERS,
+          parameters: placeholderToolParameters(name),
         },
       })),
     ];
